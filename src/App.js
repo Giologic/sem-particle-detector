@@ -1030,7 +1030,7 @@ function App() {
           <div className="bg-white p-4 rounded shadow">
             <h2 className="text-lg font-semibold mb-2">Original Image</h2>
             <div 
-              className="relative bg-gray-100 overflow-hidden h-[400px]"
+              className="relative bg-gray-100 overflow-hidden h-[600px]"
               onMouseDown={(e) => handleMouseDown(e)}
               style={{ cursor: zoom > 1 ? 'move' : 'default' }}
             >
@@ -1058,15 +1058,15 @@ function App() {
               {editMode && <span className="ml-2 text-sm text-red-500">(Edit Mode)</span>}
             </h2>
             <div 
-              className={`relative bg-gray-100 overflow-hidden h-[400px] ${editMode ? 'edit-mode' : ''}`}
+              className={`relative bg-gray-100 overflow-hidden h-[600px] ${editMode ? 'edit-mode' : ''}`}
               onMouseDown={handleCanvasMouseDown}
               onMouseMove={handleCanvasMouseMove}
               onMouseUp={handleCanvasMouseUp}
               onMouseLeave={handleCanvasMouseLeave}
               style={{ 
                 cursor: editMode 
-                  ? (isMoving ? 'move' : isResizing ? 'nwse-resize' : selectedParticle ? 'grab' : 'pointer') 
-                  : (zoom > 1 ? 'move' : 'default') 
+                  ? (isMoving ? 'grabbing' : isResizing ? 'nwse-resize' : selectedParticle ? 'grab' : 'pointer') 
+                  : (zoom > 1 ? 'grab' : 'default') 
               }}
             >
               <canvas 

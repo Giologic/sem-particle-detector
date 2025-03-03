@@ -77,7 +77,7 @@
 .image-container {
   position: relative;
   width: 100%;
-  height: 600px;
+  height: 600px !important;
   overflow: hidden;
   background-color: #f5f5f5;
   border: 1px solid #e0e0e0;
@@ -85,8 +85,9 @@
 }
 
 .image-canvas {
+  max-width: none;
+  height: auto;
   display: block;
-  cursor: move;
 }
 
 .zoom-info {
@@ -257,8 +258,16 @@ button:disabled {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .grid-cols-2 {
+  .grid-cols-1 {
     grid-template-columns: 1fr;
+  }
+  
+  .image-container {
+    height: 400px !important;
+  }
+  
+  .h-\[600px\] {
+    height: 400px !important;
   }
 }
 
@@ -355,29 +364,10 @@ canvas {
 .edit-mode {
   user-select: none;
 }
-
-/* Add these styles for the mode toggle */
-.rounded-l {
-  border-top-left-radius: 0.25rem;
-  border-bottom-left-radius: 0.25rem;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
-.rounded-r {
-  border-top-right-radius: 0.25rem;
-  border-bottom-right-radius: 0.25rem;
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-}
-
 /* Improve button appearance */
-button {
-  transition: all 0.2s ease;
-}
-
 /* Add a subtle border to the mode toggle buttons */
-.bg-gray-200 {
-  border: 1px solid #e2e8f0;
-}
 
+/* Ensure the height is applied consistently */
+.h-\[600px\] {
+  height: 600px !important;
+}
