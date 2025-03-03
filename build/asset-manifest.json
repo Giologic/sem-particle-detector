@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/sem-particle-detector/static/css/main.7bc681fd.css",
+    "main.js": "/sem-particle-detector/static/js/main.cb9cf57c.js",
+    "static/js/453.94086002.chunk.js": "/sem-particle-detector/static/js/453.94086002.chunk.js",
+    "index.html": "/sem-particle-detector/index.html",
+    "main.7bc681fd.css.map": "/sem-particle-detector/static/css/main.7bc681fd.css.map",
+    "main.cb9cf57c.js.map": "/sem-particle-detector/static/js/main.cb9cf57c.js.map",
+    "453.94086002.chunk.js.map": "/sem-particle-detector/static/js/453.94086002.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.7bc681fd.css",
+    "static/js/main.cb9cf57c.js"
+  ]
+}
