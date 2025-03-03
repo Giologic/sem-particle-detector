@@ -1,6 +1,6 @@
 {
   "name": "sem-particle-detector",
-  "homepage": "https://Giologic.github.io/sem-particle-detector",
+  "homepage": "https://giologic.github.io/sem-particle-detector",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
