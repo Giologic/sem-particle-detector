@@ -371,3 +371,96 @@ canvas {
 .h-\[600px\] {
   height: 600px !important;
 }
+
+/* Improve cursor feedback for particle interactions */
+.edit-mode {
+  user-select: none; /* Prevent text selection during dragging */
+}
+
+/* Cursor styles for different interactions */
+.cursor-grab {
+  cursor: grab !important;
+}
+
+.cursor-grabbing {
+  cursor: grabbing !important;
+}
+
+.cursor-nwse-resize {
+  cursor: nwse-resize !important;
+}
+
+/* Prevent text selection during dragging */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Add a subtle highlight to selected particles */
+.particle-selected {
+  stroke: #3b82f6;
+  stroke-width: 2px;
+}
+
+/* Add a style for the interaction mode button */
+.mode-toggle {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  z-index: 10;
+  display: flex;
+  gap: 4px;
+}
+
+.mode-toggle button {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.mode-toggle button.active {
+  background-color: #3b82f6;
+  color: white;
+}
+
+/* Add styles for the moving/resizing indicator */
+.particle-moving {
+  animation: pulse 1.5s infinite;
+}
+
+.particle-resizing {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.7;
+  }
+}
+
+/* Improve the cursor feedback */
+.edit-mode {
+  user-select: none;
+}
+
+.edit-mode.moving {
+  cursor: grabbing !important;
+}
+
+.edit-mode.resizing {
+  cursor: nwse-resize !important;
+}

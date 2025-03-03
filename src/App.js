@@ -22,9 +22,9 @@ function App() {
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [zoom, setZoom] = useState(1);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [viewPosition, setViewPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState(null);
   const [selectedParticle, setSelectedParticle] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [originalParticles, setOriginalParticles] = useState([]);
@@ -37,6 +37,12 @@ function App() {
   const canvasRef = useRef(null);
   const resultCanvasRef = useRef(null);
   const { cv, isLoaded, loadingStatus, forceEnable } = useOpenCv();
+
+  // Refs for canvas and containers
+  const fileInputRef = useRef(null);
+  const originalCanvasRef = useRef(null);
+  const originalContainerRef = useRef(null);
+  const imageContainerRef = useRef(null);
 
   // Handle image upload via dropzone
   const { getRootProps, getInputProps } = useDropzone({
@@ -261,7 +267,7 @@ function App() {
   };
 
   const handleMouseDown = (e, containerRef) => {
-    if (zoom > 1) {
+    if (containerRef.current) {
       setIsDragging(true);
       setDragStart({
         x: e.clientX,
@@ -271,14 +277,14 @@ function App() {
   };
 
   const handleMouseMove = (e) => {
-    if (isDragging && zoom > 1) {
-      const deltaX = e.clientX - dragStart.x;
-      const deltaY = e.clientY - dragStart.y;
+    if (isDragging && dragStart) {
+      const dx = e.clientX - dragStart.x;
+      const dy = e.clientY - dragStart.y;
       
-      setViewPosition(prev => ({
-        x: prev.x + deltaX,
-        y: prev.y + deltaY
-      }));
+      setViewPosition({
+        x: viewPosition.x + dx,
+        y: viewPosition.y + dy
+      });
       
       setDragStart({
         x: e.clientX,
@@ -289,6 +295,7 @@ function App() {
 
   const handleMouseUp = () => {
     setIsDragging(false);
+    setDragStart(null);
   };
 
   // Add effect for global mouse events
@@ -397,172 +404,263 @@ function App() {
     setIsResizing(false);
   };
 
-  // Modify the mouse event handlers to properly separate concerns
+  // Update the handleCanvasMouseDown function to properly handle particle selection and dragging
   const handleCanvasMouseDown = (e) => {
-    e.preventDefault();
-    
-    if (!editMode) {
-      // Regular panning behavior when not in edit mode
-      if (zoom > 1) {
-        setIsDragging(true);
-        setDragStart({
-          x: e.clientX,
-          y: e.clientY
-        });
-      }
-      return;
-    }
-    
-    // In edit mode, respect the interaction mode
-    if (interactionMode === 'pan' && zoom > 1) {
-      // Panning mode - always pan when zoomed in
-      setIsDragging(true);
-      setDragStart({
-        x: e.clientX,
-        y: e.clientY
-      });
-      return;
-    }
-    
-    // Edit mode behavior (interactionMode === 'edit')
-    if (!resultCanvasRef.current) return;
+    if (!resultCanvasRef.current || !imageContainerRef.current) return;
     
     const canvas = resultCanvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+    const container = imageContainerRef.current;
+    const rect = container.getBoundingClientRect();
     
     // Calculate the actual position on the canvas, accounting for zoom and pan
-    const x = ((e.clientX - rect.left) * scaleX / zoom) - (viewPosition.x / zoom);
-    const y = ((e.clientY - rect.top) * scaleY / zoom) - (viewPosition.y / zoom);
+    const x = ((e.clientX - rect.left) - viewPosition.x) / zoom;
+    const y = ((e.clientY - rect.top) - viewPosition.y) / zoom;
     
-    // Check if we clicked on a particle
-    let clickedOnParticle = false;
+    // Store the initial mouse position for potential panning
+    setDragStart({
+      x: e.clientX,
+      y: e.clientY
+    });
     
-    for (const p of editedParticles) {
-      const distance = Math.sqrt(Math.pow(p.x - x, 2) + Math.pow(p.y - y, 2));
-      // Check if click is on the circle border (for resizing)
-      const onBorder = Math.abs(distance - p.radius) < 10;
-      // Check if click is inside the circle (for moving)
-      const inside = distance < p.radius;
-      
-      if (onBorder || inside) {
-        clickedOnParticle = true;
-        setSelectedParticle(p);
-        
-        if (onBorder) {
-          setIsResizing(true);
-          setIsMoving(false);
-        } else if (inside) {
-          setIsMoving(true);
-          setIsResizing(false);
-        }
-        
-        break;
-      }
-    }
-    
-    if (!clickedOnParticle) {
-      // If we didn't click on a particle, deselect
-      setSelectedParticle(null);
-    }
-  };
-  
-  const handleCanvasMouseMove = (e) => {
-    e.preventDefault();
-    
-    // Handle particle editing
-    if (editMode && interactionMode === 'edit' && (isMoving || isResizing) && selectedParticle && resultCanvasRef.current) {
-      const canvas = resultCanvasRef.current;
-      const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
-      
-      // Calculate the actual position on the canvas, accounting for zoom and pan
-      const x = ((e.clientX - rect.left) * scaleX / zoom) - (viewPosition.x / zoom);
-      const y = ((e.clientY - rect.top) * scaleY / zoom) - (viewPosition.y / zoom);
-      
-      if (isMoving) {
-        // Move the particle
-        setEditedParticles(particles => particles.map(p => {
-          if (p.id === selectedParticle.id) {
-            return {
-              ...p,
-              x: Math.round(x),
-              y: Math.round(y)
-            };
-          }
-          return p;
-        }));
-      } else if (isResizing) {
-        // Resize the particle
-        const distance = Math.sqrt(
-          Math.pow(x - selectedParticle.x, 2) + 
-          Math.pow(y - selectedParticle.y, 2)
-        );
-        
-        setEditedParticles(particles => particles.map(p => {
-          if (p.id === selectedParticle.id) {
-            const newRadius = Math.max(5, Math.round(distance));
-            return {
-              ...p,
-              radius: newRadius,
-              diameter: newRadius * 2,
-              area: Math.round(Math.PI * newRadius * newRadius)
-            };
-          }
-          return p;
-        }));
-      }
-      
-      // Update the selected particle
-      const updatedParticle = editedParticles.find(p => p.id === selectedParticle.id);
-      if (updatedParticle) {
-        setSelectedParticle(updatedParticle);
-      }
-      
-      // Redraw the particles
-      redrawParticles();
+    // If we're in pan mode, just handle panning
+    if (interactionMode === 'pan') {
+      setIsDragging(true);
       return;
     }
     
-    // Handle panning when zoomed in
-    if (isDragging && zoom > 1) {
-      const deltaX = e.clientX - dragStart.x;
-      const deltaY = e.clientY - dragStart.y;
+    // If we're already moving or resizing, clicking should drop the particle
+    if (isMoving || isResizing) {
+      setIsMoving(false);
+      setIsResizing(false);
+      return;
+    }
+    
+    // In edit mode, check for particle interactions
+    let clickedOnParticle = false;
+    
+    // If we have a selected particle, check if we're interacting with it
+    if (selectedParticle) {
+      const distance = Math.sqrt(
+        Math.pow(selectedParticle.x - x, 2) + 
+        Math.pow(selectedParticle.y - y, 2)
+      );
       
-      setViewPosition(prev => ({
-        x: prev.x + deltaX,
-        y: prev.y + deltaY
-      }));
+      // Check if click is on the circle border (for resizing)
+      const onBorder = Math.abs(distance - selectedParticle.radius) < 10;
+      // Check if click is inside the circle (for moving)
+      const inside = distance < selectedParticle.radius;
+      
+      if (onBorder) {
+        setIsResizing(true);
+        setIsMoving(false);
+        clickedOnParticle = true;
+        e.preventDefault(); // Prevent other mouse events
+        return;
+      } else if (inside) {
+        setIsMoving(true);
+        setIsResizing(false);
+        clickedOnParticle = true;
+        e.preventDefault(); // Prevent other mouse events
+        return;
+      }
+    }
+    
+    // If we didn't interact with the selected particle, check other particles
+    if (!clickedOnParticle) {
+      for (const p of editedParticles) {
+        const distance = Math.sqrt(Math.pow(p.x - x, 2) + Math.pow(p.y - y, 2));
+        // Check if click is on the circle border (for resizing)
+        const onBorder = Math.abs(distance - p.radius) < 10;
+        // Check if click is inside the circle (for moving)
+        const inside = distance < p.radius;
+        
+        if (onBorder || inside) {
+          setSelectedParticle(p);
+          clickedOnParticle = true;
+          
+          if (onBorder) {
+            setIsResizing(true);
+            setIsMoving(false);
+          } else if (inside) {
+            setIsMoving(true);
+            setIsResizing(false);
+          }
+          
+          e.preventDefault(); // Prevent other mouse events
+          break;
+        }
+      }
+    }
+    
+    // If we didn't click on any particle and we're zoomed in, start panning
+    if (!clickedOnParticle && zoom > 1) {
+      setIsDragging(true);
+      
+      // If we have a selected particle but didn't click on it or its border,
+      // deselect it (drop the sphere)
+      if (selectedParticle) {
+        setSelectedParticle(null);
+      }
+    } else if (!clickedOnParticle) {
+      // If we didn't click on any particle and we're not zoomed in,
+      // just deselect the current particle if there is one
+      if (selectedParticle) {
+        setSelectedParticle(null);
+      }
+    }
+  };
+  
+  // Update the handleCanvasMouseMove function to properly handle particle dragging
+  const handleCanvasMouseMove = (e) => {
+    if (!resultCanvasRef.current || !imageContainerRef.current) return;
+    
+    const canvas = resultCanvasRef.current;
+    const container = imageContainerRef.current;
+    const rect = container.getBoundingClientRect();
+    
+    // Calculate the actual position on the canvas, accounting for zoom and pan
+    const x = ((e.clientX - rect.left) - viewPosition.x) / zoom;
+    const y = ((e.clientY - rect.top) - viewPosition.y) / zoom;
+    
+    // Handle panning if we're dragging the canvas
+    if (isDragging && dragStart) {
+      const dx = e.clientX - dragStart.x;
+      const dy = e.clientY - dragStart.y;
+      
+      setViewPosition({
+        x: viewPosition.x + dx,
+        y: viewPosition.y + dy
+      });
       
       setDragStart({
         x: e.clientX,
         y: e.clientY
       });
+      
+      return;
+    }
+    
+    // Handle particle interactions
+    if (selectedParticle) {
+      if (isMoving) {
+        // Create a copy of the selected particle with updated position
+        const updatedParticle = {
+          ...selectedParticle,
+          x: x,
+          y: y
+        };
+        
+        // Update the selected particle
+        setSelectedParticle(updatedParticle);
+        
+        // Update the particle in the editedParticles array
+        const updatedParticles = editedParticles.map(p => 
+          p.id === selectedParticle.id ? updatedParticle : p
+        );
+        
+        setEditedParticles(updatedParticles);
+        
+        // Redraw the particles
+        redrawParticles();
+        
+        e.preventDefault(); // Prevent other mouse events
+      } else if (isResizing) {
+        // Calculate the distance from the center of the particle to the current mouse position
+        const distance = Math.sqrt(
+          Math.pow(selectedParticle.x - x, 2) + 
+          Math.pow(selectedParticle.y - y, 2)
+        );
+        
+        // Create a copy of the selected particle with updated radius and diameter
+        const updatedParticle = {
+          ...selectedParticle,
+          radius: distance,
+          diameter: distance * 2
+        };
+        
+        // Update the selected particle
+        setSelectedParticle(updatedParticle);
+        
+        // Update the particle in the editedParticles array
+        const updatedParticles = editedParticles.map(p => 
+          p.id === selectedParticle.id ? updatedParticle : p
+        );
+        
+        setEditedParticles(updatedParticles);
+        
+        // Redraw the particles
+        redrawParticles();
+        
+        e.preventDefault(); // Prevent other mouse events
+      }
+    }
+    
+    // Update cursor based on what's under it
+    if (selectedParticle) {
+      const distance = Math.sqrt(
+        Math.pow(selectedParticle.x - x, 2) + 
+        Math.pow(selectedParticle.y - y, 2)
+      );
+      
+      const onBorder = Math.abs(distance - selectedParticle.radius) < 10;
+      const inside = distance < selectedParticle.radius;
+      
+      if (onBorder) {
+        container.style.cursor = 'nwse-resize';
+      } else if (inside) {
+        container.style.cursor = 'grab';
+      } else {
+        container.style.cursor = 'default';
+      }
+    } else {
+      // Check if mouse is over any particle
+      let overParticle = false;
+      
+      for (const p of editedParticles) {
+        const distance = Math.sqrt(Math.pow(p.x - x, 2) + Math.pow(p.y - y, 2));
+        const onBorder = Math.abs(distance - p.radius) < 10;
+        const inside = distance < p.radius;
+        
+        if (onBorder) {
+          container.style.cursor = 'nwse-resize';
+          overParticle = true;
+          break;
+        } else if (inside) {
+          container.style.cursor = 'grab';
+          overParticle = true;
+          break;
+        }
+      }
+      
+      if (!overParticle) {
+        container.style.cursor = zoom > 1 ? 'grab' : 'default';
+      }
     }
   };
   
+  // Update the handleCanvasMouseUp function to properly handle the end of interactions
   const handleCanvasMouseUp = (e) => {
-    e.preventDefault(); // Prevent default browser behavior
-    
-    // Reset dragging states
+    // Reset dragging state
     setIsDragging(false);
-    setIsMoving(false);
-    setIsResizing(false);
+    setDragStart(null);
     
-    // Redraw particles if in edit mode
-    if (editMode) {
+    // If we were moving or resizing, stop those actions
+    if (isMoving || isResizing) {
+      setIsMoving(false);
+      setIsResizing(false);
+      
+      // Make sure to redraw the particles to show the final position/size
       redrawParticles();
     }
   };
-  
+
   // Add this function to handle mouse leave events
   const handleCanvasMouseLeave = (e) => {
-    // Reset dragging states when mouse leaves the canvas
+    // Reset dragging state when mouse leaves the canvas
     setIsDragging(false);
-    setIsMoving(false);
-    setIsResizing(false);
+    setDragStart(null);
+    
+    // Don't reset moving and resizing on mouse leave to allow for smoother interactions
   };
 
   // Add this function to redraw particles
@@ -688,6 +786,37 @@ function App() {
   const handleIdInputKeyDown = (e) => {
     if (e.key === 'Enter') {
       selectParticleById();
+    }
+  };
+
+  // Add this function definition before it's used in the JSX
+  const handleWheel = (e) => {
+    e.preventDefault();
+    
+    // Adjust zoom based on wheel direction
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    const newZoom = Math.max(1, Math.min(10, zoom + delta));
+    
+    if (newZoom !== zoom) {
+      // Calculate mouse position relative to the container
+      const container = e.currentTarget;
+      const rect = container.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      
+      // Calculate the point on the image that's under the mouse
+      const imageX = (mouseX - viewPosition.x) / zoom;
+      const imageY = (mouseY - viewPosition.y) / zoom;
+      
+      // Calculate new view position to keep the point under the mouse
+      const newViewX = mouseX - imageX * newZoom;
+      const newViewY = mouseY - imageY * newZoom;
+      
+      setZoom(newZoom);
+      setViewPosition({
+        x: newViewX,
+        y: newViewY
+      });
     }
   };
 
@@ -1058,38 +1187,80 @@ function App() {
               {editMode && <span className="ml-2 text-sm text-red-500">(Edit Mode)</span>}
             </h2>
             <div 
-              className={`relative bg-gray-100 overflow-hidden h-[600px] ${editMode ? 'edit-mode' : ''}`}
-              onMouseDown={handleCanvasMouseDown}
-              onMouseMove={handleCanvasMouseMove}
-              onMouseUp={handleCanvasMouseUp}
-              onMouseLeave={handleCanvasMouseLeave}
-              style={{ 
-                cursor: editMode 
-                  ? (isMoving ? 'grabbing' : isResizing ? 'nwse-resize' : selectedParticle ? 'grab' : 'pointer') 
-                  : (zoom > 1 ? 'grab' : 'default') 
-              }}
+              ref={imageContainerRef}
+              className={`relative bg-gray-100 overflow-hidden h-[600px] ${editMode ? 'edit-mode' : ''} ${isDragging ? 'cursor-grabbing' : ''}`}
+              onMouseDown={editMode ? handleCanvasMouseDown : (e) => handleMouseDown(e, imageContainerRef)}
+              onMouseMove={editMode ? handleCanvasMouseMove : handleMouseMove}
+              onMouseUp={editMode ? handleCanvasMouseUp : handleMouseUp}
+              onMouseLeave={editMode ? handleCanvasMouseLeave : handleMouseUp}
+              onWheel={handleWheel}
             >
               <canvas 
                 ref={resultCanvasRef} 
-                className="max-w-full h-auto transform-origin-center"
+                className="max-w-none h-auto"
                 style={{
                   transform: `scale(${zoom})`,
                   transformOrigin: 'top left',
-                  position: 'relative',
+                  position: 'absolute',
                   left: `${viewPosition.x}px`,
                   top: `${viewPosition.y}px`
                 }}
               />
-              <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-                {zoom.toFixed(1)}x {editMode && '• Edit Mode'}
-              </div>
               
-              {/* Add a status indicator for what's happening */}
-              {(isMoving || isResizing || isDragging) && (
-                <div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-                  {isMoving && 'Moving Particle'}
-                  {isResizing && 'Resizing Particle'}
-                  {isDragging && !isMoving && !isResizing && 'Panning View'}
+              {/* Add a clear mode toggle */}
+              {editMode && zoom > 1 && (
+                <div className="mode-toggle">
+                  <button
+                    onClick={() => {
+                      setInteractionMode('edit');
+                      setIsMoving(false);
+                      setIsResizing(false);
+                    }}
+                    className={interactionMode === 'edit' ? 'active' : ''}
+                  >
+                    Edit Mode
+                  </button>
+                  <button
+                    onClick={() => {
+                      setInteractionMode('pan');
+                      setIsMoving(false);
+                      setIsResizing(false);
+                    }}
+                    className={interactionMode === 'pan' ? 'active' : ''}
+                  >
+                    Pan Mode
+                  </button>
+                </div>
+              )}
+              
+              {/* Status indicator */}
+              {editMode && (
+                <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+                  {zoom.toFixed(1)}x • 
+                  {interactionMode === 'edit' ? 'Edit Mode' : 'Pan Mode'}
+                  {selectedParticle && ` • Particle ${selectedParticle.id}`}
+                  {isMoving && ' (Moving)'}
+                  {isResizing && ' (Resizing)'}
+                </div>
+              )}
+              
+              {/* Add a floating exit selection button when a particle is selected */}
+              {editMode && selectedParticle && (
+                <button
+                  onClick={() => {
+                    setSelectedParticle(null);
+                    setIsMoving(false);
+                    setIsResizing(false);
+                  }}
+                  className="absolute top-2 right-2 bg-white bg-opacity-80 text-gray-800 text-xs px-2 py-1 rounded border border-gray-300 hover:bg-opacity-100"
+                >
+                  Exit Selection
+                </button>
+              )}
+
+              {editMode && selectedParticle && (isMoving || isResizing) && (
+                <div className="absolute top-2 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-70 text-white text-xs px-3 py-1 rounded">
+                  {isMoving ? 'Moving Particle' : 'Resizing Particle'} - Click to drop
                 </div>
               )}
             </div>
