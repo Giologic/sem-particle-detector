@@ -111,3 +111,39 @@ export const detectParticles = (cv, imgMat, params) => {
       throw error;
     }
   };
+
+export const drawParticlesWithIds = (cv, imgMat, particles, color = [0, 255, 0, 255]) => {
+  try {
+    // Clone the input image to avoid modifying it
+    const output = imgMat.clone();
+    const colorScalar = new cv.Scalar(...color);
+    
+    // Draw each particle
+    particles.forEach(particle => {
+      if (particle.x >= 0 && particle.x < output.cols && 
+          particle.y >= 0 && particle.y < output.rows) {
+        
+        const center = new cv.Point(particle.x, particle.y);
+        
+        // Draw circle outline
+        cv.circle(output, center, particle.radius, colorScalar, 2);
+        
+        // Draw center point
+        cv.circle(output, center, 2, colorScalar, -1);
+        
+        // Add text with ID instead of diameter
+        const text = `${particle.id}`;
+        const textOrg = new cv.Point(
+          Math.max(particle.x - 10, 0), 
+          Math.max(particle.y - particle.radius - 5, 15)
+        );
+        cv.putText(output, text, textOrg, cv.FONT_HERSHEY_SIMPLEX, 0.5, colorScalar, 1);
+      }
+    });
+    
+    return output;
+  } catch (error) {
+    console.error("Error in drawParticlesWithIds:", error);
+    throw error;
+  }
+};

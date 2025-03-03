@@ -135,7 +135,7 @@
 }
 
 button {
-  background-color: #4CAF50;
+  background-color: #285dff;
   color: white;
   border: none;
   padding: 10px 15px;
@@ -146,7 +146,7 @@ button {
 }
 
 button:hover {
-  background-color: #45a049;
+  background-color: #95c4f6;
 }
 
 .results-summary {
@@ -260,5 +260,124 @@ button:disabled {
   .grid-cols-2 {
     grid-template-columns: 1fr;
   }
+}
+
+/* Add these styles for zoom functionality */
+.transform-origin-center {
+  transform-origin: center;
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}
+
+.h-\[400px\] {
+  height: 400px;
+}
+
+/* Make sure canvas doesn't shrink */
+canvas {
+  min-width: 100%;
+  min-height: 100%;
+}
+
+/* Add a transition for smoother zooming */
+canvas {
+  transition: transform 0.1s ease-out;
+}
+
+/* Remove transition during dragging for better performance */
+.dragging canvas {
+  transition: none;
+}
+
+/* Add these styles for particle editing */
+.edit-mode {
+  cursor: pointer;
+}
+
+.edit-mode canvas {
+  transition: none; /* Disable transitions in edit mode for better responsiveness */
+}
+
+/* Highlight selected rows */
+.bg-blue-50 {
+  background-color: #eff6ff;
+}
+
+/* Cursor styles */
+.cursor-crosshair {
+  cursor: crosshair;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.cursor-move {
+  cursor: move;
+}
+
+/* Add these styles for ID selection */
+.overflow-y-auto {
+  overflow-y: auto;
+}
+
+.max-h-24 {
+  max-height: 6rem;
+}
+
+/* Make the ID input more prominent */
+#particle-id {
+  font-size: 1rem;
+  padding: 0.5rem;
+}
+
+/* Style for the quick select buttons */
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
+/* Add these cursor styles */
+.cursor-grab {
+  cursor: grab !important;
+}
+
+.cursor-grabbing {
+  cursor: grabbing !important;
+}
+
+.cursor-nwse-resize {
+  cursor: nwse-resize !important;
+}
+
+/* Prevent text selection during dragging */
+.edit-mode {
+  user-select: none;
+}
+
+/* Add these styles for the mode toggle */
+.rounded-l {
+  border-top-left-radius: 0.25rem;
+  border-bottom-left-radius: 0.25rem;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.rounded-r {
+  border-top-right-radius: 0.25rem;
+  border-bottom-right-radius: 0.25rem;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+/* Improve button appearance */
+button {
+  transition: all 0.2s ease;
+}
+
+/* Add a subtle border to the mode toggle buttons */
+.bg-gray-200 {
+  border: 1px solid #e2e8f0;
 }
 
