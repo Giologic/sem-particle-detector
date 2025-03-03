@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useDropzone } from 'react-dropzone';
 import * as UTIF from 'utif';
 import { detectParticles, drawParticles } from './services/particleDetectionService';
@@ -10,10 +10,9 @@ function App() {
   const [processedImage, setProcessedImage] = useState(null);
   const [particles, setParticles] = useState([]);
   const [scaleInput, setScaleInput] = useState({
-    micrometers: 80,
-    pixels: 307
+    pixels: 0,
+    micrometers: 0
   });
-  const [scaleRatio, setScaleRatio] = useState(0.8); // nm per pixel
   const [detectionParams, setDetectionParams] = useState({
     minRadius: 9,
     maxRadius: 38,
@@ -43,6 +42,19 @@ function App() {
   const originalCanvasRef = useRef(null);
   const originalContainerRef = useRef(null);
   const imageContainerRef = useRef(null);
+
+  // Use this approach instead of declaring scaleRatio multiple times
+  const scaleRatio = useMemo(() => {
+    if (scaleInput.pixels <= 0 || scaleInput.micrometers <= 0) return 0;
+    return scaleInput.micrometers / scaleInput.pixels;
+  }, [scaleInput.pixels, scaleInput.micrometers]);
+
+  // Then you don't need a separate calculateScaleRatio function
+  // Or if you want to keep it for clarity:
+  const calculateScaleRatio = () => {
+    if (scaleInput.pixels <= 0 || scaleInput.micrometers <= 0) return 0;
+    return scaleInput.micrometers / scaleInput.pixels;
+  };
 
   // Handle image upload via dropzone
   const { getRootProps, getInputProps } = useDropzone({
@@ -140,18 +152,6 @@ function App() {
     }));
   };
 
-  // Add a function to calculate the scale ratio
-  const calculateScaleRatio = () => {
-    if (scaleInput.pixels > 0) {
-      // Convert micrometers to nanometers (1 μm = 1000 nm)
-      const nanometers = scaleInput.micrometers * 1000;
-      const ratio = nanometers / scaleInput.pixels;
-      setScaleRatio(ratio);
-      return ratio;
-    }
-    return scaleRatio;
-  };
-
   // Update the scale input handler
   const handleScaleInputChange = (e) => {
     const { name, value } = e.target;
@@ -239,17 +239,21 @@ function App() {
   const exportResults = () => {
     if (editedParticles.length === 0) return;
     
-    let csvContent = "ID,POSITION,DIAMETER (PX),DIAMETER (NM),AREA (PX²)\n";
+    // Create CSV content
+    let csvContent = "ID,X,Y,Diameter (px),Diameter (µm),Area (px²)\n";
     
     editedParticles.forEach(particle => {
-      csvContent += `${particle.id},(${particle.x}, ${particle.y}),${particle.diameter},${(particle.diameter * scaleRatio).toFixed(2)},${particle.area}\n`;
+      const diameterMicrometers = (particle.diameter * scaleRatio).toFixed(3);
+      csvContent += `${particle.id},${particle.x},${particle.y},${particle.diameter},${diameterMicrometers},${particle.area}\n`;
     });
     
+    // Create a blob and download link
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = url;
+    link.setAttribute('href', url);
     link.setAttribute('download', 'particle_data.csv');
+    link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -820,6 +824,17 @@ function App() {
     }
   };
 
+  // Update the results summary section with inline calculation
+  const calculateAverageDiameter = () => {
+    if (editedParticles.length === 0) return 0;
+    
+    const sum = editedParticles.reduce((total, particle) => total + particle.diameter, 0);
+    return sum / editedParticles.length;
+  };
+
+  // Then, in your component, add this state variable or computed value
+  const averageDiameter = calculateAverageDiameter();
+
   return (
     <div className="p-4 max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">SEM Particle Detector</h1>
@@ -868,42 +883,50 @@ function App() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             {/* Scale Calibration */}
             <div className="col-span-2">
-              <label className="block text-sm font-medium mb-1">
-                Scale Calibration
-              </label>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">
-                    Micrometers (μm)
-                  </label>
-                  <input
-                    type="number"
-                    name="micrometers"
-                    value={scaleInput.micrometers}
-                    onChange={handleScaleInputChange}
-                    onBlur={calculateScaleRatio}
-                    className="w-full p-2 border border-gray-300 rounded"
-                    min="0.001"
-                    step="0.001"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">
-                    Pixels (px)
+              <h3 className="font-medium mb-2">Scale Calibration</h3>
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Known Distance (pixels)
                   </label>
                   <input
                     type="number"
                     name="pixels"
                     value={scaleInput.pixels}
                     onChange={handleScaleInputChange}
-                    onBlur={calculateScaleRatio}
                     className="w-full p-2 border border-gray-300 rounded"
                     min="1"
+                    step="1"
                   />
                 </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Actual Size (µm)
+                  </label>
+                  <input
+                    type="number"
+                    name="micrometers"
+                    value={scaleInput.micrometers}
+                    onChange={handleScaleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded"
+                    min="0.01"
+                    step="0.01"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Scale Ratio
+                  </label>
+                  <div className="p-2 bg-gray-100 rounded">
+                    {scaleRatio.toFixed(4)} µm/pixel
+                  </div>
+                </div>
               </div>
-              <div className="mt-1 text-xs text-gray-500">
-                Scale ratio: {scaleRatio.toFixed(2)} nm/pixel
+              
+              {/* Add an example calculation to help users verify */}
+              <div className="mt-2 text-sm text-gray-600">
+                <p>Example: For {scaleInput.micrometers} µm across {scaleInput.pixels} pixels, the scale is {scaleRatio.toFixed(4)} µm/pixel</p>
+                <p>A 100 pixel particle would be {(100 * scaleRatio).toFixed(2)} µm in diameter</p>
               </div>
             </div>
             
@@ -1089,7 +1112,18 @@ function App() {
               
               {selectedParticle && (
                 <div className="bg-gray-100 p-4 rounded">
-                  <h3 className="font-medium mb-2">Selected Particle: ID {selectedParticle.id}</h3>
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="font-medium">
+                      Selected Particle: ID {selectedParticle.id}
+                    </h3>
+                    <button
+                      onClick={() => setSelectedParticle(null)}
+                      className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-3 py-1 rounded text-sm"
+                    >
+                      Exit Selection
+                    </button>
+                  </div>
+                  
                   <div className="grid grid-cols-2 gap-4 mb-2">
                     <div>
                       <p className="text-sm text-gray-600">Position</p>
@@ -1097,7 +1131,7 @@ function App() {
                     </div>
                     <div>
                       <p className="text-sm text-gray-600">Diameter</p>
-                      <p>{selectedParticle.diameter}px ({(selectedParticle.diameter * scaleRatio).toFixed(2)} nm)</p>
+                      <p>{selectedParticle.diameter}px ({(selectedParticle.diameter * scaleRatio).toFixed(3)} µm)</p>
                     </div>
                   </div>
                   
@@ -1137,15 +1171,9 @@ function App() {
                 </div>
               )}
               
-              <div className="text-sm text-gray-600">
-                <p>Instructions:</p>
-                <ul className="list-disc pl-5 space-y-1">
-                  <li>Type an ID number and press Enter or click Select</li>
-                  <li>Click on a particle or Quick Select button to select it</li>
-                  <li>Drag to move the selected particle</li>
-                  <li>Drag the edge to resize</li>
-                  <li>Use buttons to fine-tune diameter</li>
-                </ul>
+              <div className="text-sm text-gray-600 mt-2">
+                <p>Scale calibration allows you to convert pixel measurements to micrometers (µm).</p>
+                <p>Enter the known distance in pixels and the corresponding size in micrometers.</p>
               </div>
             </div>
           )}
@@ -1284,59 +1312,40 @@ function App() {
             </button>
           </div>
           
+          <div className="results-summary mb-4">
+            <p>Total particles: {particles.length}</p>
+            {particles.length > 0 && (
+              <p>
+                Average diameter: {(particles.reduce((sum, p) => sum + p.diameter, 0) / particles.length).toFixed(2)} pixels 
+                ({((particles.reduce((sum, p) => sum + p.diameter, 0) / particles.length) * scaleRatio).toFixed(3)} µm)
+              </p>
+            )}
+          </div>
+          
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Position</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Diameter (px)</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Diameter (nm)</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Area (px²)</th>
-                  {editMode && (
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                  )}
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="p-2 text-left">ID</th>
+                  <th className="p-2 text-left">X</th>
+                  <th className="p-2 text-left">Y</th>
+                  <th className="p-2 text-left">Diameter (px)</th>
+                  <th className="p-2 text-left">Diameter (µm)</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {(editMode ? editedParticles : particles).map((particle) => (
+              <tbody>
+                {editedParticles.map((particle) => (
                   <tr 
-                    key={particle.id} 
-                    className={selectedParticle && particle.id === selectedParticle.id ? 'bg-blue-50' : ''}
+                    key={particle.id}
+                    className={selectedParticle && selectedParticle.id === particle.id ? 'bg-blue-50' : ''}
                     onClick={() => editMode && handleParticleSelect(particle.id)}
                     style={{ cursor: editMode ? 'pointer' : 'default' }}
                   >
-                    <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-700">{particle.id}</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">({particle.x}, {particle.y})</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{particle.diameter}</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{(particle.diameter * scaleRatio).toFixed(2)}</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{particle.area}</td>
-                    {editMode && (
-                      <td className="px-4 py-2 whitespace-nowrap text-sm">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleParticleSelect(particle.id);
-                          }}
-                          className="text-white mr-2"
-                        >
-                          Select
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditedParticles(particles => particles.filter(p => p.id !== particle.id));
-                            if (selectedParticle && selectedParticle.id === particle.id) {
-                              setSelectedParticle(null);
-                            }
-                            redrawParticles();
-                          }}
-                          className="text-white"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    )}
+                    <td className="p-2">{particle.id}</td>
+                    <td className="p-2">{particle.x}</td>
+                    <td className="p-2">{particle.y}</td>
+                    <td className="p-2">{particle.diameter}</td>
+                    <td className="p-2">{(particle.diameter * scaleRatio).toFixed(3)}</td>
                   </tr>
                 ))}
               </tbody>
