@@ -77,7 +77,7 @@
 .image-container {
   position: relative;
   width: 100%;
-  height: 600px;
+  height: 600px !important;
   overflow: hidden;
   background-color: #f5f5f5;
   border: 1px solid #e0e0e0;
@@ -85,8 +85,9 @@
 }
 
 .image-canvas {
+  max-width: none;
+  height: auto;
   display: block;
-  cursor: move;
 }
 
 .zoom-info {
@@ -135,7 +136,7 @@
 }
 
 button {
-  background-color: #4CAF50;
+  background-color: #285dff;
   color: white;
   border: none;
   padding: 10px 15px;
@@ -146,7 +147,7 @@ button {
 }
 
 button:hover {
-  background-color: #45a049;
+  background-color: #95c4f6;
 }
 
 .results-summary {
@@ -257,8 +258,209 @@ button:disabled {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .grid-cols-2 {
+  .grid-cols-1 {
     grid-template-columns: 1fr;
+  }
+  
+  .image-container {
+    height: 400px !important;
+  }
+  
+  .h-\[600px\] {
+    height: 400px !important;
   }
 }
 
+/* Add these styles for zoom functionality */
+.transform-origin-center {
+  transform-origin: center;
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}
+
+.h-\[400px\] {
+  height: 400px;
+}
+
+/* Make sure canvas doesn't shrink */
+canvas {
+  min-width: 100%;
+  min-height: 100%;
+}
+
+/* Add a transition for smoother zooming */
+canvas {
+  transition: transform 0.1s ease-out;
+}
+
+/* Remove transition during dragging for better performance */
+.dragging canvas {
+  transition: none;
+}
+
+/* Add these styles for particle editing */
+.edit-mode {
+  cursor: pointer;
+}
+
+.edit-mode canvas {
+  transition: none; /* Disable transitions in edit mode for better responsiveness */
+}
+
+/* Highlight selected rows */
+.bg-blue-50 {
+  background-color: #eff6ff;
+}
+
+/* Cursor styles */
+.cursor-crosshair {
+  cursor: crosshair;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.cursor-move {
+  cursor: move;
+}
+
+/* Add these styles for ID selection */
+.overflow-y-auto {
+  overflow-y: auto;
+}
+
+.max-h-24 {
+  max-height: 6rem;
+}
+
+/* Make the ID input more prominent */
+#particle-id {
+  font-size: 1rem;
+  padding: 0.5rem;
+}
+
+/* Style for the quick select buttons */
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
+/* Add these cursor styles */
+.cursor-grab {
+  cursor: grab !important;
+}
+
+.cursor-grabbing {
+  cursor: grabbing !important;
+}
+
+.cursor-nwse-resize {
+  cursor: nwse-resize !important;
+}
+
+/* Prevent text selection during dragging */
+.edit-mode {
+  user-select: none;
+}
+/* Improve button appearance */
+/* Add a subtle border to the mode toggle buttons */
+
+/* Ensure the height is applied consistently */
+.h-\[600px\] {
+  height: 600px !important;
+}
+
+/* Improve cursor feedback for particle interactions */
+.edit-mode {
+  user-select: none; /* Prevent text selection during dragging */
+}
+
+/* Cursor styles for different interactions */
+.cursor-grab {
+  cursor: grab !important;
+}
+
+.cursor-grabbing {
+  cursor: grabbing !important;
+}
+
+.cursor-nwse-resize {
+  cursor: nwse-resize !important;
+}
+
+/* Prevent text selection during dragging */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Add a subtle highlight to selected particles */
+.particle-selected {
+  stroke: #3b82f6;
+  stroke-width: 2px;
+}
+
+/* Add a style for the interaction mode button */
+.mode-toggle {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  z-index: 10;
+  display: flex;
+  gap: 4px;
+}
+
+.mode-toggle button {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.mode-toggle button.active {
+  background-color: #3b82f6;
+  color: white;
+}
+
+/* Add styles for the moving/resizing indicator */
+.particle-moving {
+  animation: pulse 1.5s infinite;
+}
+
+.particle-resizing {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.7;
+  }
+}
+
+/* Improve the cursor feedback */
+.edit-mode {
+  user-select: none;
+}
+
+.edit-mode.moving {
+  cursor: grabbing !important;
+}
+
+.edit-mode.resizing {
+  cursor: nwse-resize !important;
+}
