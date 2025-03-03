@@ -32,6 +32,8 @@ function App() {
   const [isResizing, setIsResizing] = useState(false);
   const [idInput, setIdInput] = useState('');
   const [interactionMode, setInteractionMode] = useState('edit'); // 'edit' or 'pan'
+  const [panSensitivity, setPanSensitivity] = useState(0.25);
+  const [zoomSensitivity, setZoomSensitivity] = useState(0.05);
   
   const canvasRef = useRef(null);
   const resultCanvasRef = useRef(null);
@@ -211,7 +213,7 @@ function App() {
       // Add sequential IDs
       const particlesWithIds = filteredParticles.map((p, index) => ({
         ...p,
-        id: (index + 1) * 10 // ID increments by 10 as shown in the image
+        id: (index + 1)
       }));
       
       setParticles(particlesWithIds);
@@ -282,14 +284,20 @@ function App() {
 
   const handleMouseMove = (e) => {
     if (isDragging && dragStart) {
+      // Calculate the movement delta
       const dx = e.clientX - dragStart.x;
       const dy = e.clientY - dragStart.y;
       
+      // Apply a sensitivity factor to reduce the movement speed
+      const panSensitivity = 0.5; // 0.5 = half speed
+      
+      // Update the view position with reduced sensitivity
       setViewPosition({
-        x: viewPosition.x + dx,
-        y: viewPosition.y + dy
+        x: viewPosition.x + (dx * panSensitivity),
+        y: viewPosition.y + (dy * panSensitivity)
       });
       
+      // Update the drag start position
       setDragStart({
         x: e.clientX,
         y: e.clientY
@@ -528,14 +536,20 @@ function App() {
     
     // Handle panning if we're dragging the canvas
     if (isDragging && dragStart) {
+      // Calculate the movement delta
       const dx = e.clientX - dragStart.x;
       const dy = e.clientY - dragStart.y;
       
+      // Apply a sensitivity factor to reduce the movement speed
+      const panSensitivity = 0.5; // 0.5 = half speed
+      
+      // Update the view position with reduced sensitivity
       setViewPosition({
-        x: viewPosition.x + dx,
-        y: viewPosition.y + dy
+        x: viewPosition.x + (dx * panSensitivity),
+        y: viewPosition.y + (dy * panSensitivity)
       });
       
+      // Update the drag start position
       setDragStart({
         x: e.clientX,
         y: e.clientY
@@ -793,12 +807,15 @@ function App() {
     }
   };
 
-  // Add this function definition before it's used in the JSX
+  // Update the handleWheel function to reduce zoom sensitivity
   const handleWheel = (e) => {
     e.preventDefault();
     
-    // Adjust zoom based on wheel direction
-    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    // Reduce the zoom sensitivity by applying a factor
+    const zoomSensitivity = 0.05; // Lower value = less sensitive
+    
+    // Calculate the zoom delta with reduced sensitivity
+    const delta = e.deltaY > 0 ? -zoomSensitivity : zoomSensitivity;
     const newZoom = Math.max(1, Math.min(10, zoom + delta));
     
     if (newZoom !== zoom) {
@@ -822,7 +839,7 @@ function App() {
         y: newViewY
       });
     }
-  };
+  }; // Make sure this closing brace is here
 
   // Update the results summary section with inline calculation
   const calculateAverageDiameter = () => {
@@ -1353,6 +1370,60 @@ function App() {
           </div>
         </div>
       )}
+      
+      {/* Add pan sensitivity control */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Pan Sensitivity: {panSensitivity.toFixed(2)}
+        </label>
+        <input
+          type="range"
+          min="0.1"
+          max="1"
+          step="0.1"
+          value={panSensitivity}
+          onChange={(e) => setPanSensitivity(parseFloat(e.target.value))}
+          className="w-full"
+        />
+      </div>
+      
+      {/* Add zoom sensitivity control */}
+      <div className="bg-white p-4 rounded shadow mb-4">
+        <h2 className="text-lg font-semibold mb-2">Navigation Settings</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Zoom Sensitivity: {zoomSensitivity.toFixed(2)}
+            </label>
+            <input
+              type="range"
+              min="0.01"
+              max="0.2"
+              step="0.01"
+              value={zoomSensitivity}
+              onChange={(e) => setZoomSensitivity(parseFloat(e.target.value))}
+              className="w-full"
+            />
+            <p className="text-xs text-gray-500 mt-1">Lower = smoother zooming</p>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Pan Sensitivity: {panSensitivity.toFixed(2)}
+            </label>
+            <input
+              type="range"
+              min="0.1"
+              max="1"
+              step="0.1"
+              value={panSensitivity}
+              onChange={(e) => setPanSensitivity(parseFloat(e.target.value))}
+              className="w-full"
+            />
+            <p className="text-xs text-gray-500 mt-1">Lower = slower panning</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
